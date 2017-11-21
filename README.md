@@ -16,6 +16,7 @@ Sample code
 ```python
 from fb_data_collector import FacebookAuthenticator
 from fb_data_collector import FacebookPostsCollector
+from fb_data_collector import FacebookCommentsCollector
 
 #below, client_id and client_secret should be your actual client ID and secret
 app_id = "<>"
