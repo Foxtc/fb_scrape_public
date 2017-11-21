@@ -19,7 +19,9 @@ import json
 import socket
 import time
 import urllib.request
-socket.setdefaulttimeout(30)
+
+# 60 seconds timeout
+socket.setdefaulttimeout(60)
 
 def load_data(data,enc='utf-8'):
     if type(data) is str:
@@ -37,9 +39,9 @@ def save_csv(filename,data,use_quotes=True,file_mode='w',enc='utf-8'): #this ass
     with open(filename,file_mode,encoding = enc) as out:
         for line in data:
             if use_quotes == True:
-                row = '"' + '","'.join([str(i).replace('"',"'") for i in line]) + '"' + "\n"
+                row = '"' + '","'.join([str(i).replace('"',"'").replace("\n"," ") for i in line]) + '"' + "\n"
             else:
-                row = ','.join([str(i) for i in line]) + "\n"
+                row = ','.join([str(i).replace("\n"," ") for i in line]) + "\n"
             out.write(row)
 
 def url_retry(url):
@@ -91,30 +93,52 @@ def make_csv_chunk(fb_json_page,scrape_mode,thread_starter='',msg=''):
             csv_chunk.append(csv_line)
     if scrape_mode == 'comments':
         for line in fb_json_page['data']:
-            csv_line = [line['from']['name'], \
-            '_' + line['from']['id'], \
-            optional_field(line,'message'), \
-            line['created_time'], \
-            optional_field(line,'like_count'), \
-            line['id'], \
-            thread_starter, \
-            msg]
+            # print(line)
+            
+            # csv_line = [line['from']['name'], '_' + 
+            #             line['from']['id'], 
+            #             optional_field(line,'message'), 
+            #             line['created_time'],
+            #             optional_field(line,'like_count'),
+            #             line['id'],
+            #             thread_starter,
+            #             msg]
+
+            csv_line = [line['from']['name'], '_' + \
+                        line['from']['id'], \
+                        optional_field(line,'message'), \
+                        line['created_time'], \
+                        optional_field(line,'like_count'), \
+                        line['id'], \
+                        thread_starter]
+
             csv_chunk.append(csv_line)
             
     return csv_chunk
 
 '''
 # The first five fields of scrape_fb are fairly self-explanatory or are explained above. 
-# scrape_mode can take three values: "feed," "posts," or "comments." The first two are identical in most cases and pull the main posts from a public wall. "comments" pulls the comments from a given permalink for a post. Only use "comments" if your IDs are post permalinks.
-# You can use end_date to specify a date around which you'd like the program to stop. It won't stop exactly on that date, but rather a little after it. If present, it needs to be a string in yyyy-mm-dd format. If you leave the field blank, it will extract all available data. 
+# scrape_mode can take three values: "feed," "posts," or "comments." The first two are identical in most cases and pull 
+# the main posts from a public wall. "comments" pulls the comments from a given permalink for a post. 
+# Only use "comments" if your IDs are post permalinks.
+# You can use end_date to specify a date around which you'd like the program to stop. 
+# It won't stop exactly on that date, but rather a little after it. If present, it needs to be a string in yyyy-mm-dd format. 
+# If you leave the field blank, it will extract all available data. 
 '''
 
-def scrape_fb(client_id,client_secret,ids,outfile="fb_data.csv",version="2.7",scrape_mode="feed",end_date=""):
+fb_explorer_access_token = "EAACEdEose0cBACZCZBZBZBbZBxUoXU77Pk9q7z8YZAlUpK50806Tg4QhPxFXFR0CerGrjlqyE4l2ayIZBmN65qGQVeyaPK5sKC7WFT2iG8jZBZCUMO2NsWrRXVEX4TRLOJPSXAYlHOFUZBNxmy9TPzHIezzlpwjXF0UQzzz4elE0ZB0SG8kqTslNc2ZA6ZCEG8IAj3VEZD"
+
+def scrape_fb(client_id,client_secret,ids,outfile="fb_data.csv",version="2.10",scrape_mode="feed",end_date=""):
     time1 = time.time()
     if type(client_id) is int:
         client_id = str(client_id)
     fb_urlobj = urllib.request.urlopen('https://graph.facebook.com/oauth/access_token?grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret)
-    fb_token = 'access_token=' + json.loads(fb_urlobj.read().decode(encoding="latin1"))['access_token']
+                                                                  # /oauth/access_token?grant_type=fb_exchange_token&client_id={app-id}&client_secret={app-secret}&fb_exchange_token={short-lived-token}
+    print("--------------")
+    # print(fb_urlobj.read())
+    print("--------------")
+    # fb_token = 'access_token=' + json.loads(fb_urlobj.read().decode(encoding="latin1"))['access_token']
+    fb_token = 'access_token=' + fb_explorer_access_token
     if "," in ids:
         fb_ids = [i.strip() for i in ids.split(",")]
     elif '.csv' in ids or '.txt' in ids:
@@ -130,7 +154,8 @@ def scrape_fb(client_id,client_secret,ids,outfile="fb_data.csv",version="2.7",sc
     if scrape_mode == 'feed' or scrape_mode == 'posts':
         header = ['from','from_id','message','picture','link','name','description','type','created_time','shares','likes','loves','wows','hahas','sads','angrys','post_id']
     else:
-        header = ['from','from_id','comment','created_time','likes','post_id','original_poster','original_message']
+        # header = ['from','from_id','comment','created_time','likes','post_id','original_poster','original_message']
+        header = ['from','from_id','comment','created_time','likes','post_id','original_poster']
 
     csv_data = []
     csv_data.insert(0,header)
@@ -139,19 +164,27 @@ def scrape_fb(client_id,client_secret,ids,outfile="fb_data.csv",version="2.7",sc
     for x,fid in enumerate(fb_ids):
         if scrape_mode == 'comments':
             msg_url = 'https://graph.facebook.com/v' + version + '/' + fid + '?fields=from,message&' + fb_token
+            print(msg_url)
             msg_json = url_retry(msg_url)
+            print(msg_json)
             if msg_json == False:
                 print("URL not available. Continuing...", fid)
                 continue
             msg_user = msg_json['from']['name']
+            print("FROM USER ",msg_user)
             msg_content = optional_field(msg_json,'message')
             field_list = 'from,message,created_time,like_count'
+            # field_list ='from,like_count,message,created_time,can_comment,comment_count,permalink_url,message_tags'
         else:
             msg_user = ''
             msg_content = ''
             field_list = 'from,message,picture,link,name,description,type,created_time,shares,likes.summary(total_count).limit(0)'
             
         data_url = 'https://graph.facebook.com/v' + version + '/' + fid.strip() + '/' + scrape_mode + '?fields=' + field_list + '&limit=100&' + fb_token
+        print("--------")
+        print ("https://graph.facebook.com/v2.10/6815841748_10155401589581749/comments?fields=from%2Clike_count%2Cmessage%2Ccreated_time%2Ccan_comment%2Ccomment_count%2Cpermalink_url%2Cmessage_tags&limit=100&access_token=EAACEdEose0cBABdw03GoT1MLZC2U8Q0qN7AxMvScEPNzJmyHGGgpQZClfF0TPoOyXCFLQiy2tISmUyqKFudBq5EWrpKqjplWkB0oCx5pB5ZBHAMtGaa9bxhOOAMKCENKHfEQTzC5NI9kMPqnEzTJZCbmpIVuOIqpIPeuFm5qCyKLJMJscZCDfbAJ5m0ukXZA3sVctuvQTJr54f2EAsnuUT")
+        print(data_url)
+        print("--------")
         data_rxns = []
         new_rxns = ['LOVE','WOW','HAHA','SAD','ANGRY']
         for i in new_rxns:
