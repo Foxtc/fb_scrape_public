@@ -54,7 +54,7 @@ class FacebookDataCollector(object):
 
 class FacebookPostsCollector(FacebookDataCollector):
 
-    def __init__(self,fb_token,version="2.10",scrape_mode="feed", outputfile=None):
+    def __init__(self,fb_token,version="2.10",scrape_mode="feed", output_file=None):
         self.fb_token = fb_token
         self.scrape_mode = scrape_mode
         self.version = version
@@ -119,7 +119,7 @@ class FacebookPostsCollector(FacebookDataCollector):
 
                 with open(self.output_file, 'a') as f:
                     for row in records:
-                        f.write(row + "\n")
+                        f.write(json.dumps(row) + "\n")
             else:
                 records += next_item['data']
 
@@ -157,7 +157,7 @@ class FacebookPostsCollector(FacebookDataCollector):
                 
                 with open(self.output_file, 'a') as f:
                     for row in records:
-                        f.write(row + "\n")
+                        f.write(json.dumps(row) + "\n")
             else:
                 records += next_item['data']
             
@@ -176,10 +176,9 @@ class FacebookPostsCollector(FacebookDataCollector):
             if self.end_dateobj != '' and self.end_dateobj > datetime.datetime.strptime(next_item['data'][-1]['created_time'][:10],"%Y-%m-%d").date():
                 break
             
-        print(x+1,'Facebook ID(s) archived.',round(time.time()-time1,2),'seconds elapsed.')
+        print(self.fb_object_id,'page archived.',round(time.time()-time1,2),'seconds elapsed.')
 
         print('Script completed in',time.time()-time1,'seconds.')
-        print("done")
         return records
 
 class FacebookCommentsCollector(FacebookDataCollector):
