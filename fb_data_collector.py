@@ -54,10 +54,11 @@ class FacebookDataCollector(object):
 
 class FacebookPostsCollector(FacebookDataCollector):
 
-    def __init__(self,fb_token,version="2.10",scrape_mode="feed"):
+    def __init__(self,fb_token,version="2.10",scrape_mode="feed", outputfile=None):
         self.fb_token = fb_token
         self.scrape_mode = scrape_mode
         self.version = version
+        self.output_file = output_file
 
     def collect(self,fb_object_id,end_date="",max_rows=0):
         
@@ -91,6 +92,12 @@ class FacebookPostsCollector(FacebookDataCollector):
             data_rxns.append('https://graph.facebook.com/v' + self.version + '/' + self.fb_object_id + '/' + self.scrape_mode + '?fields=reactions.type(' + i + ').summary(total_count).limit(0)&limit=100&' + self.fb_token)
         
         
+        # header = ['from','from_id','message','picture','link','name','description','type','created_time','shares','likes','loves','wows','hahas','sads','angrys','post_id']
+
+        # if(self.output_file != None):
+        #     with open(self.output_file, 'w') as f:
+        #         f.write(','.join(header) + "\n")
+
         records = []
 
         next_item = utils.url_retry(data_url)
@@ -105,19 +112,24 @@ class FacebookPostsCollector(FacebookDataCollector):
                     except (KeyError,IndexError):
                         j[new_rxns[n]] = 0
             
-            # print(type(next_item.keys()))
             # records += [fb_json_page['data'] for fb_json_page in next_item]
-            records += next_item['data']
-            print("number of records",len(records))
+            if(self.output_file != None):
+                records = next_item['data']
+                print("persisting data ... ",self.output_file)
+
+                with open(self.output_file, 'a') as f:
+                    for row in records:
+                        f.write(row + "\n")
+            else:
+                records += next_item['data']
 
             if(max_rows > 0):
                 if(max_rows >= len(records)):
                     return records
                 # print(line)
 
-
         else:
-            print("Skipping ID " + fid + " ...")
+            print("Skipping ID " + self.fb_object_id + " ...")
             # continue
         n = 0
         
@@ -138,7 +150,16 @@ class FacebookPostsCollector(FacebookDataCollector):
                 continue
             
             # records += [fb_json_page['data'] for fb_json_page in next_item]
-            records += next_item['data']
+            
+
+            if(self.output_file != None):
+                records = next_item['data']
+                
+                with open(self.output_file, 'a') as f:
+                    for row in records:
+                        f.write(row + "\n")
+            else:
+                records += next_item['data']
             
             print("number of records",len(records))
 
