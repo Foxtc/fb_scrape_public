@@ -1,5 +1,6 @@
 # Facebook data collector
 
+Based on Deen's work (https://github.com/dfreelon/fb_scrape_public).
 This script can download posts and comments from public Facebook pages and groups (__but not users__). It requires Python 3.
 
 Instructions
